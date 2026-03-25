@@ -323,18 +323,36 @@
             voices = synth.getVoices();
             const voiceSelect = document.getElementById('voiceSelect');
             voiceSelect.innerHTML = '';
+            
+            let bestVoiceIndex = -1;
+            let fallbackVoiceIndex = -1;
+
             voices.forEach((voice, i) => {
                 if (voice.lang.includes('en')) {
                     let opt = document.createElement('option');
                     opt.value = i;
                     opt.textContent = `${voice.name} (${voice.lang})`;
-                    // 自動選擇較好聽的女聲
-                    if (voice.name.includes('Google US English') || voice.name.includes('Samantha') || voice.name.includes('Microsoft Zira')) {
-                        opt.selected = true;
+                    
+                    if (voice.name.includes('Microsoft Ava Multilingual Online')) {
+                        bestVoiceIndex = i;
+                    } else if (fallbackVoiceIndex === -1 && (voice.name.includes('Google US English') || voice.name.includes('Samantha') || voice.name.includes('Microsoft Zira'))) {
+                        fallbackVoiceIndex = i;
                     }
                     voiceSelect.appendChild(opt);
                 }
             });
+
+            // 設定預設語音：Ava 優先，其他優質語音次之
+            const selectedIndex = bestVoiceIndex !== -1 ? bestVoiceIndex : fallbackVoiceIndex;
+            if (selectedIndex !== -1) {
+                Array.from(voiceSelect.options).forEach(opt => {
+                    if (parseInt(opt.value) === selectedIndex) {
+                        opt.selected = true;
+                    }
+                });
+            } else if (voiceSelect.options.length > 0) {
+                voiceSelect.options[0].selected = true;
+            }
         }
 
         // --- Navigation ---
