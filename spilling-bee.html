@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FET Spelling Bee App</title>
+    <style>
+        :root {
+            --primary-yellow: #FFD93D;
+            --sky-blue: #6EB3F7;
+            --accent-orange: #FF923E;
+            --correct-green: #6BCB77;
+            --wrong-red: #FF6B6B;
+            --vowel-red: #E63946;
+            --consonant-blue: #1D3557;
+            --bg-color: #F0F9FF;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        /* Header & Controls */
+        .header {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--sky-blue);
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 0px #fff;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            flex: 1;
+            padding: 8px;
+            border-radius: 10px;
+            border: 2px solid var(--sky-blue);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        /* Tabs */
+        .tab-container {
+            display: flex;
+            width: 100%;
+            max-width: 600px;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: #ddd;
+            border-radius: 15px 15px 0 0;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .tab.active {
+            background: var(--primary-yellow);
+            color: #444;
+            transform: translateY(-5px);
+        }
+
+        /* Main Card */
+        .card {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Mode A: Review Styles */
+        .word-display { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; letter-spacing: 2px; }
+        .vowel { color: var(--vowel-red); }
+        .consonant { color: var(--consonant-blue); }
+        .syllables { color: #888; font-size: 1.2rem; margin-bottom: 15px; }
+        .info-box { font-size: 1.2rem; margin: 10px 0; padding: 10px; border-radius: 10px; background: #f9f9f9; }
+        .hidden { display: none !important; }
+
+        /* Mode B: Puzzle Styles */
+        .puzzle-area { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+        .letter-btn {
+            width: 50px; height: 50px; font-size: 1.5rem; font-weight: bold;
+            background: var(--sky-blue); color: white; border: none; border-radius: 10px;
+            cursor: pointer; box-shadow: 0 4px 0 #4a8dc9;
+        }
+        .letter-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #4a8dc9; }
+        .answer-preview { font-size: 2.5rem; border-bottom: 4px dashed var(--sky-blue); min-width: 200px; height: 50px; margin-bottom: 20px; }
+
+        /* Mode C: Dictation */
+        .dictation-input {
+            width: 80%; font-size: 2rem; padding: 10px; text-align: center;
+            border: 3px solid var(--sky-blue); border-radius: 15px; outline: none;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 50px; cursor: pointer;
+            font-weight: bold; font-size: 1rem; transition: 0.2s;
+        }
+        .btn-speak { background: var(--primary-yellow); font-size: 1.5rem; margin: 10px; }
+        .btn-toggle { background: #eee; margin: 5px; }
+        .btn-reset { background: var(--accent-orange); color: white; margin-top: 20px; }
+        .btn-clear { background: #bbb; color: white; margin-top: 10px; }
+
+        /* Footer Nav */
+        .footer-nav {
+            width: 100%; max-width: 600px; display: flex; justify-content: space-between; margin-top: 20px;
+        }
+        .nav-btn {
+            width: 48%; padding: 15px; border-radius: 15px; border: none;
+            background: var(--sky-blue); color: white; font-size: 1.2rem; cursor: pointer;
+        }
+        .nav-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Popups */
+        .overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7);
+            display:none; justify-content:center; align-items:center; z-index:100;
+        }
+        .popup {
+            background: white; padding: 40px; border-radius: 30px; text-align: center;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .popup h2 { font-size: 2.5rem; color: var(--correct-green); margin: 0; }
+
+        @media (max-width: 480px) {
+            .word-display { font-size: 2.2rem; }
+            .letter-btn { width: 40px; height: 40px; font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🐝 FET Spelling Bee</h1>
+        <div class="control-row">
+            <select id="weekSelect" onchange="changeWeek()">
+                <!-- Weeks populated by JS -->
+            </select>
+            <select id="voiceSelect">
+                <!-- Voices populated by JS -->
+            </select>
+        </div>
+    </div>
+
+    <div class="tab-container">
+        <div class="tab active" onclick="switchMode('Review')">Review</div>
+        <div class="tab" onclick="switchMode('Puzzle')">Puzzle</div>
+        <div class="tab" onclick="switchMode('Dictation')">Dictation</div>
+    </div>
+
+    <div class="card">
+        <!-- Mode A: Review -->
+        <div id="modeReview">
+            <div class="syllables" id="reviewSyllables"></div>
+            <div class="word-display" id="reviewWord"></div>
+            <button class="btn btn-speak" onclick="speakCurrentWord()">🔊</button>
+            <div id="posBox" class="info-box"></div>
+            <div id="chineseBox" class="info-box"></div>
+            <div>
+                <button class="btn btn-toggle" onclick="toggleVisibility('posBox')">Hide/Show POS</button>
+                <button class="btn btn-toggle" onclick="toggleVisibility('chineseBox')">Hide/Show Chinese</button>
+            </div>
+        </div>
+
+        <!-- Mode B: Puzzle -->
+        <div id="modePuzzle" class="hidden">
+            <div class="answer-preview" id="puzzlePreview"></div>
+            <div class="puzzle-area" id="puzzleBoard"></div>
+            <button class="btn btn-reset" onclick="initPuzzle()">↺ 重置積木 (Reset)</button>
+        </div>
+
+        <!-- Mode C: Dictation -->
+        <div id="modeDictation" class="hidden">
+            <button class="btn btn-speak" style="font-size: 3rem;" onclick="speakCurrentWord()">🔊</button>
+            <p>Listen and Type:</p>
+            <input type="text" id="dictInput" class="dictation-input" autocomplete="off" oninput="checkDictation()">
+            <br>
+            <button class="btn btn-clear" onclick="clearDictation()">↺ 清除輸入 (Clear)</button>
+        </div>
+    </div>
+
+    <div class="footer-nav">
+        <button class="nav-btn" id="prevBtn" onclick="prevWord()">上一個 (Prev)</button>
+        <button class="nav-btn" id="nextBtn" onclick="nextWord()">下一個 (Next)</button>
+    </div>
+
+    <div class="overlay" id="overlay">
+        <div class="popup">
+            <h2 id="encourageText">Excellent!</h2>
+        </div>
+    </div>
+
+    <script>
+        // --- Data Structure ---
+        const wordData = [
+            // Week 1
+            { w: "mantle", s: "man-tle", p: "n.", c: "地殼", wk: 1 },
+            { w: "atmosphere", s: "at-mos-phere", p: "n.", c: "大氣層、氣氛", wk: 1 },
+            { w: "outermost", s: "out-er-most", p: "adj.", c: "最外層的", wk: 1 },
+            { w: "constantly", s: "con-stant-ly", p: "adv.", c: "不斷地", wk: 1 },
+            { w: "shift", s: "shift", p: "v.", c: "移動", wk: 1 },
+            { w: "drift", s: "drift", p: "v.", c: "漂流", wk: 1 },
+            { w: "deadly", s: "dead-ly", p: "adj.", c: "致命的", wk: 1 },
+            { w: "collision", s: "col-li-sion", p: "n.", c: "碰撞", wk: 1 },
+            { w: "circulate", s: "cir-cu-late", p: "v.", c: "循環", wk: 1 },
+            { w: "substance", s: "sub-stance", p: "n.", c: "物質", wk: 1 },
+            // Week 3
+            { w: "movable", s: "mov-a-ble", p: "adj.", c: "可移動的", wk: 3 },
+            { w: "eruption", s: "e-rup-tion", p: "n.", c: "爆發", wk: 3 },
+            { w: "molten", s: "mol-ten", p: "adj.", c: "熔化的", wk: 3 },
+            { w: "enormous", s: "e-nor-mous", p: "adj.", c: "巨大的", wk: 3 },
+            { w: "estimate", s: "es-ti-mate", p: "v.", c: "估計", wk: 3 },
+            { w: "harmful", s: "harm-ful", p: "adj.", c: "有害的", wk: 3 },
+            { w: "rapidly", s: "rap-id-ly", p: "adv.", c: "迅速地", wk: 3 },
+            { w: "temporarily", s: "tem-po-rar-i-ly", p: "adv.", c: "暫時地", wk: 3 },
+            { w: "adopt", s: "a-dopt", p: "v.", c: "採用、收養", wk: 3 },
+            { w: "abundant", s: "a-bun-dant", p: "adj.", c: "豐富的", wk: 3 },
+            // Week 4
+            { w: "boundary", s: "bound-a-ry", p: "n.", c: "邊界", wk: 4 },
+            { w: "survey", s: "ˈsur-vey", p: "n.", c: "調查", wk: 4 },
+            { w: "Sanskrit", s: "San-skrit", p: "n.", c: "梵文", wk: 4 },
+            { w: "tectonic", s: "tec-ton-ic", p: "adj.", c: "地殼構造的", wk: 4 },
+            { w: "subcontinent", s: "sub-con-ti-nent", p: "n.", c: "次大陸", wk: 4 },
+            { w: "gigantic", s: "gi-gan-tic", p: "adj.", c: "巨大的", wk: 4 },
+            { w: "plateau", s: "pla-teau", p: "n.", c: "高原", wk: 4 },
+            { w: "climate", s: "cli-mate", p: "n.", c: "氣候", wk: 4 },
+            { w: "altitude", s: "al-ti-tude", p: "n.", c: "高度", wk: 4 },
+            { w: "temperate", s: "tem-per-ate", p: "adj.", c: "溫度適中的", wk: 4 },
+            // Week 5
+            { w: "populated", s: "pop-u-lat-ed", p: "adj.", c: "人口稠密的", wk: 5 },
+            { w: "several", s: "sev-er-al", p: "adj.", c: "幾個的", wk: 5 },
+            { w: "monoon", s: "mon-oon", p: "n.", c: "季風", wk: 5 },
+            { w: "species", s: "spe-cies", p: "n.", c: "物種", wk: 5 },
+            { w: "harvest", s: "har-vest", p: "v.", c: "收穫", wk: 5 },
+            { w: "erosion", s: "e-ro-sion", p: "n.", c: "侵蝕", wk: 5 },
+            { w: "plentiful", s: "plen-ti-ful", p: "adj.", c: "豐富的", wk: 5 },
+            { w: "lumber", s: "lum-ber", p: "n.", c: "木材", wk: 5 },
+            { w: "woven", s: "wo-ven", p: "v.", c: "編織 (weave 的過去分詞)", wk: 5 },
+            { w: "peak", s: "peak", p: "n.", c: "山峰", wk: 5 },
+            // Week 6
+            { w: "maze", s: "maze", p: "n.", c: "迷宮", wk: 6 },
+            { w: "disobedience", s: "dis-o-be-di-ence", p: "n.", c: "不服從", wk: 6 },
+            { w: "consequence", s: "con-se-quence", p: "n.", c: "後果", wk: 6 },
+            { w: "honor", s: "hon-or", p: "n.", c: "榮譽", wk: 6 },
+            { w: "confusing", s: "con-fus-ing", p: "adj.", c: "令人困惑的", wk: 6 },
+            { w: "commission", s: "com-mis-sion", p: "n.", c: "委託(任務)", wk: 6 },
+            { w: "creation", s: "cre-a-tion", p: "n.", c: "創造", wk: 6 },
+            { w: "announce", s: "an-nounce", p: "v.", c: "宣布", wk: 6 },
+            { w: "forbid", s: "for-bid", p: "v.", c: "禁止", wk: 6 },
+            { w: "stubborn", s: "stub-born", p: "adj.", c: "頑固的", wk: 6 },
+            // Week 7
+            { w: "ornate", s: "or-nate", p: "adj.", c: "裝飾華麗的", wk: 7 },
+            { w: "appear", s: "ap-pear", p: "v.", c: "出現", wk: 7 },
+            { w: "guard", s: "guard", p: "n.", c: "守衛", wk: 7 },
+            { w: "stern", s: "stern", p: "adj.", c: "嚴厲的", wk: 7 },
+            { w: "scold", s: "scold", p: "v.", c: "責罵", wk: 7 },
+            { w: "desert", s: "des-ert", p: "n.", c: "沙漠", wk: 7 },
+            { w: "punish", s: "pun-ish", p: "v.", c: "懲罰", wk: 7 },
+            { w: "extract", s: "ex-tract", p: "v.", c: "取出、拔出", wk: 7 },
+            { w: "declare", s: "de-clare", p: "v.", c: "宣布", wk: 7 },
+            { w: "temperament", s: "tem-per-a-ment", p: "n.", c: "性情", wk: 7 },
+            // Week 8
+            { w: "dramatic", s: "dra-mat-ic", p: "adj.", c: "戲劇性的", wk: 8 },
+            { w: "practical", s: "prac-ti-cal", p: "adj.", c: "實際的", wk: 8 },
+            { w: "admire", s: "ad-mire", p: "v.", c: "欽佩", wk: 8 },
+            { w: "startle", s: "star-tle", p: "v.", c: "驚嚇", wk: 8 },
+            { w: "astonish", s: "as-ton-ish", p: "v.", c: "使驚訝", wk: 8 },
+            { w: "devote", s: "de-vote", p: "v.", c: "奉獻", wk: 8 },
+            { w: "parapet", s: "pa-ra-pet", p: "n.", c: "矮牆", wk: 8 },
+            { w: "curious", s: "cu-ri-ous", p: "adj.", c: "好奇的", wk: 8 },
+            { w: "sadness", s: "sad-ness", p: "n.", c: "悲傷", wk: 8 },
+            { w: "infernal", s: "in-fer-nal", p: "adj.", c: "地獄般(熱)的", wk: 8 }
+        ];
+
+        // --- State Variables ---
+        let currentMode = 'Review';
+        let currentWeekWords = [];
+        let currentIndex = 0;
+        let puzzleInput = "";
+        let synth = window.speechSynthesis;
+        let voices = [];
+
+        // --- Init ---
+        window.onload = () => {
+            populateWeeks();
+            loadVoices();
+            changeWeek();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = loadVoices;
+            }
+        };
+
+        function populateWeeks() {
+            const select = document.getElementById('weekSelect');
+            const weeks = [...new Set(wordData.map(w => w.wk))];
+            weeks.forEach(wk => {
+                let opt = document.createElement('option');
+                opt.value = wk;
+                opt.textContent = `Week ${wk}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadVoices() {
+            voices = synth.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, i) => {
+                if (voice.lang.includes('en')) {
+                    let opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = `${voice.name} (${voice.lang})`;
+                    if (voice.name.includes('Google US English') || voice.name.includes('Samantha')) {
+                        opt.selected = true;
+                    }
+                    voiceSelect.appendChild(opt);
+                }
+            });
+        }
+
+        // --- Navigation ---
+        function changeWeek() {
+            const wk = parseInt(document.getElementById('weekSelect').value);
+            currentWeekWords = wordData.filter(w => w.wk === wk);
+            currentIndex = 0;
+            updateDisplay();
+        }
+
+        function nextWord() {
+            if (currentIndex < currentWeekWords.length - 1) {
+                currentIndex++;
+                updateDisplay();
+            } else {
+                showFinish();
+            }
+        }
+
+        function prevWord() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateDisplay();
+            }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('modeReview').classList.add('hidden');
+            document.getElementById('modePuzzle').classList.add('hidden');
+            document.getElementById('modeDictation').classList.add('hidden');
+            
+            document.getElementById(`mode${mode}`).classList.remove('hidden');
+            updateDisplay();
+        }
+
+        // --- Core Logic ---
+        function updateDisplay() {
+            const wordObj = currentWeekWords[currentIndex];
+            document.getElementById('prevBtn').disabled = (currentIndex === 0);
+            
+            if (currentMode === 'Review') {
+                renderReview(wordObj);
+            } else if (currentMode === 'Puzzle') {
+                initPuzzle();
+            } else if (currentMode === 'Dictation') {
+                clearDictation();
+            }
+            speakCurrentWord();
+        }
+
+        // Mode A Logic
+        function renderReview(obj) {
+            const wordHtml = obj.w.split('').map(char => {
+                if (/[aeiouAEIOU]/.test(char)) return `<span class="vowel">${char}</span>`;
+                return `<span class="consonant">${char}</span>`;
+            }).join('');
+            
+            document.getElementById('reviewWord').innerHTML = wordHtml;
+            document.getElementById('reviewSyllables').textContent = `(${obj.s})`;
+            document.getElementById('posBox').textContent = obj.p;
+            document.getElementById('chineseBox').textContent = obj.c;
+        }
+
+        function toggleVisibility(id) {
+            document.getElementById(id).classList.toggle('hidden');
+        }
+
+        // Mode B Logic
+        function initPuzzle() {
+            const word = currentWeekWords[currentIndex].w;
+            puzzleInput = "";
+            document.getElementById('puzzlePreview').textContent = "";
+            const board = document.getElementById('puzzleBoard');
+            board.innerHTML = "";
+            
+            // Shuffle letters
+            let letters = word.split('').sort(() => Math.random() - 0.5);
+            letters.forEach((l, idx) => {
+                let btn = document.createElement('button');
+                btn.className = 'letter-btn';
+                btn.textContent = l;
+                btn.onclick = () => {
+                    puzzleInput += l;
+                    document.getElementById('puzzlePreview').textContent = puzzleInput;
+                    btn.style.visibility = "hidden";
+                    checkPuzzle();
+                };
+                board.appendChild(btn);
+            });
+        }
+
+        function checkPuzzle() {
+            const target = currentWeekWords[currentIndex].w;
+            if (puzzleInput === target) {
+                handleSuccess();
+            } else if (puzzleInput.length >= target.length) {
+                // Wrong answer
+                setTimeout(() => {
+                    alert("Oops! Try again.");
+                    initPuzzle();
+                }, 300);
+            }
+        }
+
+        // Mode C Logic
+        function clearDictation() {
+            const input = document.getElementById('dictInput');
+            input.value = "";
+            input.focus();
+        }
+
+        function checkDictation() {
+            const val = document.getElementById('dictInput').value;
+            const target = currentWeekWords[currentIndex].w;
+            if (val.toLowerCase() === target.toLowerCase()) {
+                handleSuccess();
+            }
+        }
+
+        // Success Feedback
+        function handleSuccess() {
+            playDing();
+            speakCurrentWord();
+            showEncouragement();
+            
+            setTimeout(() => {
+                hideOverlay();
+                nextWord();
+            }, 1500);
+        }
+
+        function showEncouragement() {
+            const words = ["Excellent!", "Wonderful!", "Fantastic!", "Terrific!", "Superb!", "Fabulous!"];
+            document.getElementById('encourageText').textContent = words[Math.floor(Math.random() * words.length)];
+            document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function showFinish() {
+            document.getElementById('encourageText').textContent = "🎉 Week Finished! Well Done!";
+            document.getElementById('overlay').style.display = 'flex';
+            setTimeout(hideOverlay, 3000);
+        }
+
+        function hideOverlay() {
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        // --- Audio & TTS ---
+        function speakCurrentWord() {
+            const word = currentWeekWords[currentIndex].w;
+            const utter = new SpeechSynthesisUtterance(word);
+            const selectedVoiceIndex = document.getElementById('voiceSelect').value;
+            if (voices[selectedVoiceIndex]) {
+                utter.voice = voices[selectedVoiceIndex];
+            }
+            utter.rate = 0.8;
+            synth.speak(utter);
+        }
+
+        function playDing() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        }
+    </script>
+</body>
+</html>
